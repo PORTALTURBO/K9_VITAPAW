@@ -1,0 +1,78 @@
+@import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&family=Manrope:wght@400;500;600;700;800&display=swap');
+@import "tailwindcss";
+
+@theme {
+  --font-headline: "Plus Jakarta Sans", ui-sans-serif, system-ui, sans-serif;
+  --font-body: "Manrope", ui-sans-serif, system-ui, sans-serif;
+
+  --color-primary: #03241f;
+  --color-primary-container: #1b3a34;
+  --color-secondary: #146a5d;
+  --color-secondary-container: #a1eedd;
+  --color-surface: #fbfbe2;
+  --color-surface-container-low: #f5f5dc;
+  --color-surface-container-lowest: #ffffff;
+  --color-surface-container-high: #eaead1;
+  --color-surface-container-highest: #e4e4cc;
+  --color-error: #ba1a1a;
+  --color-error-container: #ffdad6;
+  --color-tertiary: #361700;
+  --color-tertiary-container: #552800;
+  --color-on-surface: #1b1d0e;
+  --color-on-surface-variant: #414846;
+  --color-outline: #717976;
+  --color-outline-variant: #c1c8c5;
+
+  --radius-lg: 2rem;
+  --radius-xl: 3rem;
+}
+
+@layer base {
+  body {
+    @apply bg-surface text-on-surface font-body antialiased;
+  }
+
+  h1, h2, h3, h4, h5, h6 {
+    @apply font-headline;
+  }
+}
+
+@layer components {
+  .glass {
+    @apply bg-surface/80 backdrop-blur-xl;
+  }
+
+  .glass-dark {
+    @apply bg-primary/80 backdrop-blur-xl;
+  }
+
+  .btn-primary {
+    @apply bg-primary text-white px-8 py-4 rounded-lg font-bold hover:scale-[0.98] transition-transform flex items-center justify-center gap-2;
+  }
+
+  .btn-secondary {
+    @apply bg-surface-container-high text-on-surface px-8 py-4 rounded-lg font-bold border border-outline-variant/20 flex items-center justify-center gap-2;
+  }
+
+  .card-lowest {
+    @apply bg-surface-container-lowest rounded-xl p-6 border border-outline-variant/10 shadow-sm;
+  }
+
+  .card-low {
+    @apply bg-surface-container-low rounded-xl p-6 border border-outline-variant/10;
+  }
+}
+
+.no-scrollbar::-webkit-scrollbar {
+  display: none;
+}
+
+.no-scrollbar {
+  -ms-overflow-style: none;
+  scrollbar-width: none;
+}
+
+.organic-shape {
+  border-radius: 42% 58% 70% 30% / 45% 45% 55% 55%;
+}
+
