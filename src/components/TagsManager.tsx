@@ -33,9 +33,17 @@ const PRESET_COLORS = [
 
 export const TagsManager: React.FC<TagsManagerProps> = ({ onClose }) => {
   const [activeTab, setActiveTab] = useState<'categories' | 'statuses'>('categories');
-  const [categories, setCategories] = useState<CustomCategory[]>(storageService.getCategories());
-  const [statuses, setStatuses] = useState<CustomStatus[]>(storageService.getStatuses());
+  const [categories, setCategories] = useState<CustomCategory[]>([]);
+  const [statuses, setStatuses] = useState<CustomStatus[]>([]);
   
+  React.useEffect(() => {
+    const loadData = async () => {
+      setCategories(await storageService.getCategories());
+      setStatuses(await storageService.getStatuses());
+    };
+    loadData();
+  }, []);
+
   const [showForm, setShowForm] = useState(false);
   
   // Category Form State
@@ -47,7 +55,7 @@ export const TagsManager: React.FC<TagsManagerProps> = ({ onClose }) => {
   const [statLabel, setStatLabel] = useState('');
   const [statColorIdx, setStatColorIdx] = useState(0);
 
-  const handleSaveCategory = () => {
+  const handleSaveCategory = async () => {
     if (!catLabel) return;
     const newCat: CustomCategory = {
       id: `cat_${Date.now()}`,
@@ -56,18 +64,18 @@ export const TagsManager: React.FC<TagsManagerProps> = ({ onClose }) => {
       color: PRESET_COLORS[catColorIdx].color,
       bgColor: PRESET_COLORS[catColorIdx].bgColor,
     };
-    storageService.saveCategory(newCat);
-    setCategories(storageService.getCategories());
+    await storageService.saveCategory(newCat);
+    setCategories(await storageService.getCategories());
     setShowForm(false);
     setCatLabel('');
   };
 
-  const handleDeleteCategory = (id: string) => {
-    storageService.deleteCategory(id);
-    setCategories(storageService.getCategories());
+  const handleDeleteCategory = async (id: string) => {
+    await storageService.deleteCategory(id);
+    setCategories(await storageService.getCategories());
   };
 
-  const handleSaveStatus = () => {
+  const handleSaveStatus = async () => {
     if (!statLabel) return;
     const newStat: CustomStatus = {
       id: `stat_${Date.now()}`,
@@ -75,15 +83,15 @@ export const TagsManager: React.FC<TagsManagerProps> = ({ onClose }) => {
       color: PRESET_COLORS[statColorIdx].color,
       bgColor: PRESET_COLORS[statColorIdx].bgColor,
     };
-    storageService.saveStatus(newStat);
-    setStatuses(storageService.getStatuses());
+    await storageService.saveStatus(newStat);
+    setStatuses(await storageService.getStatuses());
     setShowForm(false);
     setStatLabel('');
   };
 
-  const handleDeleteStatus = (id: string) => {
-    storageService.deleteStatus(id);
-    setStatuses(storageService.getStatuses());
+  const handleDeleteStatus = async (id: string) => {
+    await storageService.deleteStatus(id);
+    setStatuses(await storageService.getStatuses());
   };
 
   return (

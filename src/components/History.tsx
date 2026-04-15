@@ -26,8 +26,16 @@ export const HistoryScreen: React.FC<HistoryScreenProps> = ({ pet, events, onEdi
   const [filter, setFilter] = useState<string>('all');
   const [search, setSearch] = useState('');
 
-  const categories = storageService.getCategories();
-  const statuses = storageService.getStatuses();
+  const [categories, setCategories] = useState<CustomCategory[]>([]);
+  const [statuses, setStatuses] = useState<CustomStatus[]>([]);
+
+  React.useEffect(() => {
+    const loadData = async () => {
+      setCategories(await storageService.getCategories());
+      setStatuses(await storageService.getStatuses());
+    };
+    loadData();
+  }, []);
 
   const filteredEvents = events
     .filter(e => filter === 'all' || e.category === filter)

@@ -1,11 +1,13 @@
 import { Pet, MedicalEvent, OwnerProfile, CustomCategory, CustomStatus } from '../types';
 import { v4 as uuidv4 } from 'uuid';
+import localforage from 'localforage';
 
 const PETS_KEY = 'k9_vitalpaw_pets_v2';
 const EVENTS_KEY = 'k9_vitalpaw_events_v2';
 const OWNER_KEY = 'k9_vitalpaw_owner_v2';
 const CATEGORIES_KEY = 'k9_vitalpaw_categories_v2';
 const STATUSES_KEY = 'k9_vitalpaw_statuses_v2';
+const SETTINGS_KEY = 'k9_vitalpaw_settings_v2';
 
 const DEFAULT_CATEGORIES: CustomCategory[] = [
   { id: 'medical', label: 'Médico', icon: 'BriefcaseMedical', color: '#B22222', bgColor: '#FFD6D6' },
@@ -21,128 +23,142 @@ const DEFAULT_STATUSES: CustomStatus[] = [
 ];
 
 export const storageService = {
-  getCategories: (): CustomCategory[] => {
-    const data = localStorage.getItem(CATEGORIES_KEY);
+  getSettings: async () => {
+    const data = await localforage.getItem(SETTINGS_KEY);
     if (!data) {
-      localStorage.setItem(CATEGORIES_KEY, JSON.stringify(DEFAULT_CATEGORIES));
-      return DEFAULT_CATEGORIES;
+      const defaultSettings = { biometricEnabled: false, aiProvider: 'gemma4b', aiPromptShown: false, aiDownloaded: false };
+      await localforage.setItem(SETTINGS_KEY, defaultSettings);
+      return defaultSettings;
     }
-    return JSON.parse(data);
+    return data as { biometricEnabled: boolean, aiProvider: string, aiPromptShown: boolean, aiDownloaded: boolean };
   },
 
-  saveCategory: (category: CustomCategory) => {
-    const categories = storageService.getCategories();
+  saveSettings: async (settings: any) => {
+    await localforage.setItem(SETTINGS_KEY, settings);
+  },
+
+  getCategories: async (): Promise<CustomCategory[]> => {
+    const data = await localforage.getItem<CustomCategory[]>(CATEGORIES_KEY);
+    if (!data) {
+      await localforage.setItem(CATEGORIES_KEY, DEFAULT_CATEGORIES);
+      return DEFAULT_CATEGORIES;
+    }
+    return data;
+  },
+
+  saveCategory: async (category: CustomCategory) => {
+    const categories = await storageService.getCategories();
     const index = categories.findIndex(c => c.id === category.id);
     if (index >= 0) {
       categories[index] = category;
     } else {
       categories.push(category);
     }
-    localStorage.setItem(CATEGORIES_KEY, JSON.stringify(categories));
+    await localforage.setItem(CATEGORIES_KEY, categories);
   },
 
-  deleteCategory: (id: string) => {
-    const categories = storageService.getCategories().filter(c => c.id !== id);
-    localStorage.setItem(CATEGORIES_KEY, JSON.stringify(categories));
+  deleteCategory: async (id: string) => {
+    const categories = await storageService.getCategories();
+    await localforage.setItem(CATEGORIES_KEY, categories.filter(c => c.id !== id));
   },
 
-  getStatuses: (): CustomStatus[] => {
-    const data = localStorage.getItem(STATUSES_KEY);
+  getStatuses: async (): Promise<CustomStatus[]> => {
+    const data = await localforage.getItem<CustomStatus[]>(STATUSES_KEY);
     if (!data) {
-      localStorage.setItem(STATUSES_KEY, JSON.stringify(DEFAULT_STATUSES));
+      await localforage.setItem(STATUSES_KEY, DEFAULT_STATUSES);
       return DEFAULT_STATUSES;
     }
-    return JSON.parse(data);
+    return data;
   },
 
-  saveStatus: (status: CustomStatus) => {
-    const statuses = storageService.getStatuses();
+  saveStatus: async (status: CustomStatus) => {
+    const statuses = await storageService.getStatuses();
     const index = statuses.findIndex(s => s.id === status.id);
     if (index >= 0) {
       statuses[index] = status;
     } else {
       statuses.push(status);
     }
-    localStorage.setItem(STATUSES_KEY, JSON.stringify(statuses));
+    await localforage.setItem(STATUSES_KEY, statuses);
   },
 
-  deleteStatus: (id: string) => {
-    const statuses = storageService.getStatuses().filter(s => s.id !== id);
-    localStorage.setItem(STATUSES_KEY, JSON.stringify(statuses));
+  deleteStatus: async (id: string) => {
+    const statuses = await storageService.getStatuses();
+    await localforage.setItem(STATUSES_KEY, statuses.filter(s => s.id !== id));
   },
 
-  getOwnerProfile: (): OwnerProfile => {
-    const data = localStorage.getItem(OWNER_KEY);
+  getOwnerProfile: async (): Promise<OwnerProfile> => {
+    const data = await localforage.getItem<OwnerProfile>(OWNER_KEY);
     if (!data) {
       const defaultProfile: OwnerProfile = {
         name: 'Dueño',
         photo: 'https://i.pravatar.cc/150?img=11',
       };
-      localStorage.setItem(OWNER_KEY, JSON.stringify(defaultProfile));
+      await localforage.setItem(OWNER_KEY, defaultProfile);
       return defaultProfile;
     }
-    return JSON.parse(data);
+    return data;
   },
 
-  saveOwnerProfile: (profile: OwnerProfile) => {
-    localStorage.setItem(OWNER_KEY, JSON.stringify(profile));
+  saveOwnerProfile: async (profile: OwnerProfile) => {
+    await localforage.setItem(OWNER_KEY, profile);
   },
 
-  getPets: (): Pet[] => {
-    const data = localStorage.getItem(PETS_KEY);
+  getPets: async (): Promise<Pet[]> => {
+    const data = await localforage.getItem<Pet[]>(PETS_KEY);
     if (!data) {
-      localStorage.setItem(PETS_KEY, JSON.stringify([]));
+      await localforage.setItem(PETS_KEY, []);
       return [];
     }
-    return JSON.parse(data);
+    return data;
   },
 
-  savePet: (pet: Pet) => {
-    const pets = storageService.getPets();
+  savePet: async (pet: Pet) => {
+    const pets = await storageService.getPets();
     const index = pets.findIndex((p) => p.id === pet.id);
     if (index >= 0) {
       pets[index] = pet;
     } else {
       pets.push({ ...pet, id: uuidv4() });
     }
-    localStorage.setItem(PETS_KEY, JSON.stringify(pets));
+    await localforage.setItem(PETS_KEY, pets);
   },
 
-  deletePet: (id: string) => {
-    const pets = storageService.getPets().filter((p) => p.id !== id);
-    localStorage.setItem(PETS_KEY, JSON.stringify(pets));
-    // Also delete events for this pet
-    const events = storageService.getEvents().filter((e) => e.petId !== id);
-    localStorage.setItem(EVENTS_KEY, JSON.stringify(events));
+  deletePet: async (id: string) => {
+    const pets = await storageService.getPets();
+    await localforage.setItem(PETS_KEY, pets.filter((p) => p.id !== id));
+    const events = await storageService.getEvents();
+    await localforage.setItem(EVENTS_KEY, events.filter((e) => e.petId !== id));
   },
 
-  getEvents: (): MedicalEvent[] => {
-    const data = localStorage.getItem(EVENTS_KEY);
+  getEvents: async (): Promise<MedicalEvent[]> => {
+    const data = await localforage.getItem<MedicalEvent[]>(EVENTS_KEY);
     if (!data) {
-      localStorage.setItem(EVENTS_KEY, JSON.stringify([]));
+      await localforage.setItem(EVENTS_KEY, []);
       return [];
     }
-    return JSON.parse(data);
+    return data;
   },
 
-  getEventsByPet: (petId: string): MedicalEvent[] => {
-    return storageService.getEvents().filter((e) => e.petId === petId);
+  getEventsByPet: async (petId: string): Promise<MedicalEvent[]> => {
+    const events = await storageService.getEvents();
+    return events.filter((e) => e.petId === petId);
   },
 
-  saveEvent: (event: MedicalEvent) => {
-    const events = storageService.getEvents();
+  saveEvent: async (event: MedicalEvent) => {
+    const events = await storageService.getEvents();
     const index = events.findIndex((e) => e.id === event.id);
     if (index >= 0) {
       events[index] = event;
     } else {
       events.push({ ...event, id: uuidv4() });
     }
-    localStorage.setItem(EVENTS_KEY, JSON.stringify(events));
+    await localforage.setItem(EVENTS_KEY, events);
   },
 
-  deleteEvent: (id: string) => {
-    const events = storageService.getEvents().filter((e) => e.id !== id);
-    localStorage.setItem(EVENTS_KEY, JSON.stringify(events));
+  deleteEvent: async (id: string) => {
+    const events = await storageService.getEvents();
+    await localforage.setItem(EVENTS_KEY, events.filter((e) => e.id !== id));
   },
 };
 

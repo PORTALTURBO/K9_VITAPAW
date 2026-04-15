@@ -7,15 +7,18 @@ import { CopilotScreen } from './components/Copilot';
 import { EventForm } from './components/EventForm';
 import { PetForm } from './components/PetForm';
 import { SettingsScreen } from './components/Settings';
-import { DoseCalculator } from './components/DoseCalculator';
+import { MedicationScreen } from './components/MedicationScreen';
 import { Multimedia } from './components/Multimedia';
 import { TopBar, BottomNav } from './components/Navigation';
 import { ConfirmModal } from './components/ConfirmModal';
+import { AIPromptModal } from './components/AIPromptModal';
+import { AIDownloadProgress } from './components/AIDownloadProgress';
 import { storageService } from './services/storageService';
 import { Pet, MedicalEvent } from './types';
 import { AnimatePresence, motion } from 'motion/react';
+import { Info } from 'lucide-react';
 
-type AppState = 'splash' | 'lock' | 'pet-selector' | 'main';
+type AppState = 'splash' | 'lock' | 'pet-selector' | 'main' | 'settings';
 type MainTab = 'dashboard' | 'history' | 'multimedia' | 'copilot' | 'settings';
 
 export default function App() {
@@ -30,7 +33,7 @@ export default function App() {
   const [editingEvent, setEditingEvent] = useState<MedicalEvent | undefined>();
   const [showPetForm, setShowPetForm] = useState(false);
   const [editingPet, setEditingPet] = useState<Pet | undefined>();
-  const [showDoseCalculator, setShowDoseCalculator] = useState(false);
+  const [showMedications, setShowMedications] = useState(false);
 
   // Confirm Modal state
   const [confirmConfig, setConfirmConfig] = useState<{
@@ -45,26 +48,70 @@ export default function App() {
     onConfirm: () => {},
   });
 
+  // AI Prompt states
+  const [showAIPrompt, setShowAIPrompt] = useState(false);
+  const [isDownloadingAI, setIsDownloadingAI] = useState(false);
+  const [aiDownloadProgress, setAiDownloadProgress] = useState(0);
+  const [showAIToast, setShowAIToast] = useState(false);
+
   useEffect(() => {
     loadData();
   }, []);
 
-  const loadData = () => {
-    const loadedPets = storageService.getPets();
-    const loadedEvents = storageService.getEvents();
+  const loadData = async () => {
+    const loadedPets = await storageService.getPets();
+    const loadedEvents = await storageService.getEvents();
     setPets(loadedPets);
     setEvents(loadedEvents);
   };
 
-  const handlePetSelect = (pet: Pet) => {
+  const handlePetSelect = async (pet: Pet) => {
     setSelectedPet(pet);
     setState('main');
     setActiveTab('dashboard');
+    
+    const settings = await storageService.getSettings();
+    if (!settings.aiPromptShown) {
+      setShowAIPrompt(true);
+    }
   };
 
-  const handleSaveEvent = (event: MedicalEvent) => {
-    storageService.saveEvent(event);
-    loadData();
+  const handleAcceptAI = async () => {
+    setShowAIPrompt(false);
+    setIsDownloadingAI(true);
+    
+    const settings = await storageService.getSettings();
+    await storageService.saveSettings({ ...settings, aiPromptShown: true });
+
+    // Simulate download progress
+    let progress = 0;
+    const interval = setInterval(async () => {
+      progress += Math.random() * 10;
+      if (progress >= 100) {
+        clearInterval(interval);
+        setAiDownloadProgress(100);
+        setTimeout(async () => {
+          setIsDownloadingAI(false);
+          const currentSettings = await storageService.getSettings();
+          await storageService.saveSettings({ ...currentSettings, aiDownloaded: true, aiProvider: 'gemma4b' });
+        }, 1000);
+      } else {
+        setAiDownloadProgress(progress);
+      }
+    }, 500);
+  };
+
+  const handleDeclineAI = async () => {
+    setShowAIPrompt(false);
+    const settings = await storageService.getSettings();
+    await storageService.saveSettings({ ...settings, aiPromptShown: true });
+    setShowAIToast(true);
+    setTimeout(() => setShowAIToast(false), 5000);
+  };
+
+  const handleSaveEvent = async (event: MedicalEvent) => {
+    await storageService.saveEvent(event);
+    await loadData();
     setShowEventForm(false);
     setEditingEvent(undefined);
   };
@@ -74,16 +121,16 @@ export default function App() {
       isOpen: true,
       title: 'Eliminar Evento',
       message: '¿Estás seguro de eliminar este registro? Esta acción no se puede deshacer.',
-      onConfirm: () => {
-        storageService.deleteEvent(id);
-        loadData();
+      onConfirm: async () => {
+        await storageService.deleteEvent(id);
+        await loadData();
       }
     });
   };
 
-  const handleSavePet = (pet: Pet) => {
-    storageService.savePet(pet);
-    loadData();
+  const handleSavePet = async (pet: Pet) => {
+    await storageService.savePet(pet);
+    await loadData();
     setShowPetForm(false);
     setEditingPet(undefined);
     if (selectedPet?.id === pet.id) {
@@ -96,9 +143,9 @@ export default function App() {
       isOpen: true,
       title: 'Eliminar Mascota',
       message: '¿Estás seguro de eliminar esta mascota y todo su historial? Esta acción no se puede deshacer.',
-      onConfirm: () => {
-        storageService.deletePet(id);
-        loadData();
+      onConfirm: async () => {
+        await storageService.deletePet(id);
+        await loadData();
         setShowPetForm(false);
         setEditingPet(undefined);
         if (selectedPet?.id === id) {
@@ -128,6 +175,7 @@ export default function App() {
               setEditingPet(selectedPet);
               setShowPetForm(true);
             }}
+            onOpenDoseCalculator={() => setShowMedications(true)}
           />
         );
       case 'history':
@@ -153,8 +201,8 @@ export default function App() {
       case 'settings':
         return (
           <SettingsScreen 
+            onClose={() => setActiveTab('dashboard')}
             onChangePet={() => setState('pet-selector')}
-            onOpenDoseCalculator={() => setShowDoseCalculator(true)}
           />
         );
       default:
@@ -164,6 +212,24 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-surface selection:bg-secondary/20 selection:text-secondary">
+      <AnimatePresence mode="wait">
+        {showAIToast && (
+          <motion.div 
+            initial={{ opacity: 0, y: -50 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -50 }}
+            className="fixed top-4 left-4 right-4 md:left-auto md:right-4 md:w-96 z-[200] bg-surface rounded-2xl shadow-xl border border-outline-variant/20 p-4 flex items-center gap-3"
+          >
+            <div className="p-2 bg-primary/10 rounded-full">
+              <Info className="w-5 h-5 text-primary" />
+            </div>
+            <p className="text-sm text-on-surface">
+              Recuerda que cuando quieras puedes instalar la IA o configurar una desde los ajustes de la app.
+            </p>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <AnimatePresence mode="wait">
         {state === 'splash' && (
           <SplashScreen key="splash" onComplete={() => setState('lock')} />
@@ -184,6 +250,7 @@ export default function App() {
             >
               <PetSelector 
                 pets={pets} 
+                events={events}
                 onSelect={handlePetSelect}
                 onAdd={() => {
                   setEditingPet(undefined);
@@ -193,6 +260,23 @@ export default function App() {
                   setEditingPet(pet);
                   setShowPetForm(true);
                 }}
+                onOpenSettings={() => setState('settings')}
+              />
+            </motion.div>
+          </div>
+        )}
+
+        {state === 'settings' && (
+          <div className="fixed inset-0 flex flex-col items-center bg-[#F9F6E8]">
+            <motion.div 
+              key="settings"
+              initial={{ opacity: 0, y: 20 }}
+              animate={{ opacity: 1, y: 0 }}
+              exit={{ opacity: 0, y: 20 }}
+              className="w-full h-full max-w-md md:max-w-2xl lg:max-w-4xl xl:max-w-5xl mx-auto relative flex flex-col shadow-2xl bg-[#F9F6E8] overflow-hidden"
+            >
+              <SettingsScreen 
+                onClose={() => setState('pet-selector')} 
               />
             </motion.div>
           </div>
@@ -275,7 +359,7 @@ export default function App() {
             className="fixed inset-0 z-[120]"
           >
             <EventForm 
-              petId={selectedPet.id} 
+              pet={selectedPet} 
               event={editingEvent}
               onSave={handleSaveEvent}
               onClose={() => {
@@ -306,11 +390,19 @@ export default function App() {
           </motion.div>
         )}
 
-        {showDoseCalculator && selectedPet && (
-          <DoseCalculator 
-            pet={selectedPet}
-            onClose={() => setShowDoseCalculator(false)}
-          />
+        {showMedications && selectedPet && (
+          <motion.div
+            initial={{ y: '100%' }}
+            animate={{ y: 0 }}
+            exit={{ y: '100%' }}
+            transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+            className="fixed inset-0 z-[120]"
+          >
+            <MedicationScreen 
+              pet={selectedPet}
+              onClose={() => setShowMedications(false)}
+            />
+          </motion.div>
         )}
       </AnimatePresence>
 
@@ -321,6 +413,18 @@ export default function App() {
         onConfirm={confirmConfig.onConfirm}
         onCancel={() => setConfirmConfig(prev => ({ ...prev, isOpen: false }))}
       />
+
+      <AnimatePresence>
+        {showAIPrompt && (
+          <AIPromptModal 
+            onAccept={handleAcceptAI}
+            onDecline={handleDeclineAI}
+          />
+        )}
+        {isDownloadingAI && (
+          <AIDownloadProgress progress={aiDownloadProgress} />
+        )}
+      </AnimatePresence>
     </div>
   );
 }

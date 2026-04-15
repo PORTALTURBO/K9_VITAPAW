@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
-import { Plus, Edit2, Activity, Search, BriefcaseMedical, Utensils, Heart, AlertCircle } from 'lucide-react';
+import { Plus, Edit2, Activity, Search, BriefcaseMedical, Utensils, Heart, AlertCircle, Settings } from 'lucide-react';
 import { Pet, MedicalEvent, OwnerProfile, CustomCategory } from '../types';
 import { storageService } from '../services/storageService';
 import { OwnerProfileForm } from './OwnerProfileForm';
@@ -8,30 +8,40 @@ import * as Icons from 'lucide-react';
 
 interface PetSelectorProps {
   pets: Pet[];
+  events: MedicalEvent[];
   onSelect: (pet: Pet) => void;
   onAdd: () => void;
   onEdit: (pet: Pet) => void;
+  onOpenSettings: () => void;
 }
 
-export const PetSelector: React.FC<PetSelectorProps> = ({ pets, onSelect, onAdd, onEdit }) => {
-  const [ownerProfile, setOwnerProfile] = useState<OwnerProfile>(storageService.getOwnerProfile());
+export const PetSelector: React.FC<PetSelectorProps> = ({ pets, events, onSelect, onAdd, onEdit, onOpenSettings }) => {
+  const [ownerProfile, setOwnerProfile] = useState<OwnerProfile>({ name: 'Dueño', photo: '' });
   const [showOwnerForm, setShowOwnerForm] = useState(false);
   const [upcomingEvents, setUpcomingEvents] = useState<MedicalEvent[]>([]);
-  const categories = storageService.getCategories();
+  const [categories, setCategories] = useState<CustomCategory[]>([]);
+
+  useEffect(() => {
+    const loadData = async () => {
+      const profile = await storageService.getOwnerProfile();
+      setOwnerProfile(profile);
+      const cats = await storageService.getCategories();
+      setCategories(cats);
+    };
+    loadData();
+  }, []);
 
   useEffect(() => {
     // Get all events and sort by date to find upcoming ones
-    const allEvents = storageService.getEvents();
-    const futureEvents = allEvents
+    const futureEvents = events
       .filter(e => e.status === 'active' || new Date(e.date) >= new Date())
       .sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
       .slice(0, 3); // Get top 3 upcoming
     setUpcomingEvents(futureEvents);
-  }, [pets]);
+  }, [events]);
 
   const getActiveEventsCount = (petId: string) => {
-    const events = storageService.getEventsByPet(petId);
-    return events.filter(e => e.status === 'active').length;
+    return events.filter(e => e.petId === petId && e.status === 'active').length;
   };
 
   const calculateAge = (birthDate: string) => {
@@ -40,8 +50,8 @@ export const PetSelector: React.FC<PetSelectorProps> = ({ pets, onSelect, onAdd,
     return Math.abs(ageDate.getUTCFullYear() - 1970);
   };
 
-  const handleSaveOwnerProfile = (profile: OwnerProfile) => {
-    storageService.saveOwnerProfile(profile);
+  const handleSaveOwnerProfile = async (profile: OwnerProfile) => {
+    await storageService.saveOwnerProfile(profile);
     setOwnerProfile(profile);
     setShowOwnerForm(false);
   };
@@ -55,12 +65,20 @@ export const PetSelector: React.FC<PetSelectorProps> = ({ pets, onSelect, onAdd,
         <div className="flex items-center gap-4">
           <h1 className="text-2xl font-bold text-white tracking-tight">K9 VitalPaw</h1>
         </div>
-        <button 
-          onClick={() => setShowOwnerForm(true)}
-          className="w-10 h-10 rounded-full overflow-hidden border-2 border-white/20 hover:border-white/60 transition-colors"
-        >
-          <img src={ownerProfile.photo || "https://i.pravatar.cc/150?img=11"} alt={ownerProfile.name} className="w-full h-full object-cover" />
-        </button>
+        <div className="flex items-center gap-3">
+          <button 
+            onClick={onOpenSettings}
+            className="w-10 h-10 rounded-full bg-white/10 flex items-center justify-center text-white hover:bg-white/20 transition-colors"
+          >
+            <Settings className="w-5 h-5" />
+          </button>
+          <button 
+            onClick={() => setShowOwnerForm(true)}
+            className="w-10 h-10 rounded-full overflow-hidden border-2 border-white/20 hover:border-white/60 transition-colors"
+          >
+            <img src={ownerProfile.photo || "https://i.pravatar.cc/150?img=11"} alt={ownerProfile.name} className="w-full h-full object-cover" />
+          </button>
+        </div>
       </div>
 
       {/* Header Section */}

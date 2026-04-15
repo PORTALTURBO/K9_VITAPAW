@@ -1,7 +1,7 @@
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { X, Save, Calendar, Clock, Image as ImageIcon, Bell, Camera, Video, AlertCircle, Thermometer, HeartPulse, Stethoscope, Building2, Pill, Mic, FileText } from 'lucide-react';
-import { MedicalEvent, MediaItem } from '../types';
+import { MedicalEvent, MediaItem, Pet } from '../types';
 import { SEVERITIES } from '../constants';
 import { storageService } from '../services/storageService';
 import { cn } from '../lib/utils';
@@ -9,30 +9,48 @@ import { v4 as uuidv4 } from 'uuid';
 import * as Icons from 'lucide-react';
 
 interface EventFormProps {
-  petId: string;
+  pet: Pet;
   event?: MedicalEvent;
   onSave: (event: MedicalEvent) => void;
   onClose: () => void;
 }
 
-export const EventForm: React.FC<EventFormProps> = ({ petId, event, onSave, onClose }) => {
-  const categories = storageService.getCategories();
-  const statuses = storageService.getStatuses();
+export const EventForm: React.FC<EventFormProps> = ({ pet, event, onSave, onClose }) => {
+  const [categories, setCategories] = useState<any[]>([]);
+  const [statuses, setStatuses] = useState<any[]>([]);
+
+  useEffect(() => {
+    const loadData = async () => {
+      const cats = await storageService.getCategories();
+      const stats = await storageService.getStatuses();
+      setCategories(cats);
+      setStatuses(stats);
+      
+      if (!event) {
+        setFormData(prev => ({
+          ...prev,
+          category: cats[0]?.id || 'medical',
+          status: stats[0]?.id || 'active'
+        }));
+      }
+    };
+    loadData();
+  }, []);
 
   const [formData, setFormData] = useState<Partial<MedicalEvent>>(
     event || {
-      petId,
+      petId: pet.id,
       title: '',
       description: '',
-      category: categories[0]?.id || 'medical',
+      category: 'medical',
       severity: 'medium',
-      status: statuses[0]?.id || 'active',
+      status: 'active',
       date: new Date().toISOString().split('T')[0],
       time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', hour12: false }),
       media: [],
       medication: { name: '', dosage: '', duration: '' },
       vitals: { temperature: undefined, heartRate: undefined },
-      professional: { name: '', clinic: '' },
+      professional: pet.vetName ? { name: pet.vetName, clinic: pet.vetClinic || '' } : { name: '', clinic: '' },
       reminder: { frequency: 12, unit: 'hrs', enabled: true, limitType: 'infinite', occurrences: 3 }
     }
   );
@@ -43,7 +61,7 @@ export const EventForm: React.FC<EventFormProps> = ({ petId, event, onSave, onCl
 
     onSave({
       id: event?.id || uuidv4(),
-      petId,
+      petId: pet.id,
       title: formData.title,
       description: formData.description || '',
       category: formData.category as string,
@@ -89,7 +107,7 @@ export const EventForm: React.FC<EventFormProps> = ({ petId, event, onSave, onCl
           <button onClick={onClose} className="p-2 hover:bg-black/5 rounded-full transition-colors">
             <X className="w-6 h-6" />
           </button>
-          <h2 className="text-xl font-bold">Ficha Médica Definitiva</h2>
+          <h2 className="text-xl font-bold">Registro Médico</h2>
         </div>
         <button onClick={handleSubmit} className="text-sm font-bold text-[#1B3A34] uppercase tracking-wider hover:opacity-70">
           Save
@@ -101,7 +119,7 @@ export const EventForm: React.FC<EventFormProps> = ({ petId, event, onSave, onCl
           
           <div className="mb-8">
             <p className="text-[10px] font-bold text-[#2E7D6F] uppercase tracking-widest mb-1">CLINICAL RECORDS</p>
-            <h1 className="text-3xl font-black text-[#1B3A34] mb-2 leading-tight">Ficha Médica Definitiva</h1>
+            <h1 className="text-3xl font-black text-[#1B3A34] mb-2 leading-tight">Registro Médico</h1>
             <p className="text-gray-600 text-sm">Registra el historial médico detallado para un seguimiento veterinario profesional.</p>
           </div>
 
@@ -257,8 +275,7 @@ export const EventForm: React.FC<EventFormProps> = ({ petId, event, onSave, onCl
               <Activity className="w-4 h-4 text-[#1B3A34]" />
               <h3 className="text-sm font-bold text-[#1B3A34] uppercase tracking-widest">Mediciones / Signos Vitales</h3>
             </div>
-            
-            <div className="grid grid-cols-2 gap-4">
+             <div className="grid grid-cols-2 gap-4">
               <div className="bg-transparent border border-[#1B3A34]/20 rounded-3xl p-4 flex items-center gap-4">
                 <Thermometer className="w-6 h-6 text-[#1B3A34]/60" />
                 <div>
@@ -285,7 +302,7 @@ export const EventForm: React.FC<EventFormProps> = ({ petId, event, onSave, onCl
                       type="number"
                       value={formData.vitals?.heartRate || ''}
                       onChange={(e) => setFormData({ ...formData, vitals: { ...formData.vitals, heartRate: parseInt(e.target.value) } })}
-                      className="w-12 bg-transparent border-none p-0 text-xl font-medium text-[#1B3A34] focus:ring-0"
+                      className="w-16 bg-transparent border-none p-0 text-xl font-medium text-[#1B3A34] focus:ring-0"
                       placeholder="80"
                     />
                     <span className="text-sm font-medium text-[#1B3A34]">bpm</span>

@@ -40,7 +40,6 @@ export const BottomNav: React.FC<BottomNavProps> = ({ activeTab, onTabChange }) 
     { id: 'history', label: 'Historial', icon: History },
     { id: 'multimedia', label: 'Galería', icon: ImageIcon },
     { id: 'copilot', label: 'Copilot', icon: Brain },
-    { id: 'settings', label: 'Ajustes', icon: Settings },
   ];
 
   return (

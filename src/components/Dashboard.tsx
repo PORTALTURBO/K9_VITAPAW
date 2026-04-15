@@ -33,9 +33,16 @@ interface DashboardProps {
   events: MedicalEvent[];
   onAddEvent: () => void;
   onEditPet: () => void;
+  onOpenDoseCalculator: () => void;
 }
 
-export const Dashboard: React.FC<DashboardProps> = ({ pet, events, onAddEvent, onEditPet }) => {
+export const Dashboard: React.FC<DashboardProps> = ({ pet, events, onAddEvent, onEditPet, onOpenDoseCalculator }) => {
+  const [categories, setCategories] = React.useState<any[]>([]);
+
+  React.useEffect(() => {
+    storageService.getCategories().then(setCategories);
+  }, []);
+
   const urgentEvents = events.filter(e => e.severity === 'high' && e.status !== 'resolved');
   const activeEvents = events.filter(e => e.status === 'active');
   const resolvedEvents = events.filter(e => e.status === 'resolved');
@@ -44,7 +51,6 @@ export const Dashboard: React.FC<DashboardProps> = ({ pet, events, onAddEvent, o
     new Date(b.date).getTime() - new Date(a.date).getTime()
   ).slice(0, 3);
 
-  const categories = storageService.getCategories();
   const getCategory = (id: string) => categories.find(c => c.id === id) || categories[0];
 
   // Calculate distribution data
@@ -105,6 +111,34 @@ export const Dashboard: React.FC<DashboardProps> = ({ pet, events, onAddEvent, o
       </section>
 
       <div className="px-6 -mt-6 relative z-30 space-y-6">
+        {/* Quick Actions */}
+        <div className="grid grid-cols-2 gap-4">
+          <button 
+            onClick={onOpenDoseCalculator}
+            className="bg-white p-4 rounded-3xl border border-outline-variant/20 shadow-sm flex items-center gap-3 hover:bg-surface-container-lowest transition-colors"
+          >
+            <div className="p-2 bg-[#E2F0D9] rounded-xl">
+              <span className="text-xl leading-none">💊</span>
+            </div>
+            <div className="text-left">
+              <p className="font-bold text-primary text-sm leading-tight">Calculadora</p>
+              <p className="text-[10px] text-on-surface-variant font-medium">de Dosis</p>
+            </div>
+          </button>
+          <button 
+            onClick={onAddEvent}
+            className="bg-primary p-4 rounded-3xl shadow-sm flex items-center gap-3 hover:bg-primary/90 transition-colors"
+          >
+            <div className="p-2 bg-white/20 rounded-xl">
+              <Icons.Plus className="w-5 h-5 text-white" />
+            </div>
+            <div className="text-left">
+              <p className="font-bold text-white text-sm leading-tight">Nuevo</p>
+              <p className="text-[10px] text-white/80 font-medium">Registro</p>
+            </div>
+          </button>
+        </div>
+
         {/* Grid de Estadísticas */}
         <div className="grid grid-cols-2 gap-4">
           {/* Total Eventos */}
