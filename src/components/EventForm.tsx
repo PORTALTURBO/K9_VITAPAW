@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { motion } from 'motion/react';
-import { X, Save, Calendar, Clock, Image as ImageIcon, Bell, Camera, Video, AlertCircle, Thermometer, HeartPulse, Stethoscope, Building2, Pill, Mic, FileText } from 'lucide-react';
+import { X, Save, Calendar, Clock, Image as ImageIcon, Bell, Camera, Video, AlertCircle, Thermometer, HeartPulse, Stethoscope, Building2, Pill, Mic, FileText, Plus } from 'lucide-react';
 import { MedicalEvent, MediaItem } from '../types';
 import { SEVERITIES } from '../constants';
 import { storageService } from '../services/storageService';
@@ -119,8 +119,7 @@ export const EventForm: React.FC<EventFormProps> = ({ petId, event, onSave, onCl
             
             <div className="grid grid-cols-2 gap-3 mb-6">
               {categories.map((category) => {
-                // @ts-ignore
-                const Icon = Icons[category.icon] || Icons.HelpCircle;
+                const Icon = (Icons as any)[category.icon] || Icons.HelpCircle;
                 const isSelected = formData.category === category.id;
                 return (
                   <button
@@ -268,7 +267,7 @@ export const EventForm: React.FC<EventFormProps> = ({ petId, event, onSave, onCl
                       type="number"
                       step="0.1"
                       value={formData.vitals?.temperature || ''}
-                      onChange={(e) => setFormData({ ...formData, vitals: { ...formData.vitals, temperature: parseFloat(e.target.value) } })}
+                      onChange={(e) => setFormData({ ...formData, vitals: { ...formData.vitals, temperature: e.target.value ? parseFloat(e.target.value) : undefined } })}
                       className="w-16 bg-transparent border-none p-0 text-xl font-medium text-[#1B3A34] focus:ring-0"
                       placeholder="38.5"
                     />
@@ -284,7 +283,7 @@ export const EventForm: React.FC<EventFormProps> = ({ petId, event, onSave, onCl
                     <input
                       type="number"
                       value={formData.vitals?.heartRate || ''}
-                      onChange={(e) => setFormData({ ...formData, vitals: { ...formData.vitals, heartRate: parseInt(e.target.value) } })}
+                      onChange={(e) => setFormData({ ...formData, vitals: { ...formData.vitals, heartRate: e.target.value ? parseInt(e.target.value) : undefined } })}
                       className="w-12 bg-transparent border-none p-0 text-xl font-medium text-[#1B3A34] focus:ring-0"
                       placeholder="80"
                     />
@@ -468,7 +467,7 @@ export const EventForm: React.FC<EventFormProps> = ({ petId, event, onSave, onCl
                     <input 
                       type="number" 
                       value={formData.reminder.frequency}
-                      onChange={(e) => setFormData({ ...formData, reminder: { ...formData.reminder!, frequency: parseInt(e.target.value) } })}
+                      onChange={(e) => setFormData({ ...formData, reminder: { ...formData.reminder!, frequency: e.target.value ? parseInt(e.target.value) : 12 } })}
                       className="w-full bg-[#1B3A34]/5 border-none rounded-2xl px-4 py-3 text-[#1B3A34] font-medium focus:ring-0"
                     />
                   </div>
@@ -517,7 +516,7 @@ export const EventForm: React.FC<EventFormProps> = ({ petId, event, onSave, onCl
                         type="number"
                         min="1"
                         value={formData.reminder.occurrences || 1}
-                        onChange={(e) => setFormData({ ...formData, reminder: { ...formData.reminder!, occurrences: parseInt(e.target.value) } })}
+                        onChange={(e) => setFormData({ ...formData, reminder: { ...formData.reminder!, occurrences: e.target.value ? parseInt(e.target.value) : 1 } })}
                         className="w-full bg-[#1B3A34]/5 border-none rounded-2xl px-4 py-3 text-[#1B3A34] font-medium focus:ring-0"
                       />
                     </motion.div>
@@ -551,14 +550,3 @@ export const EventForm: React.FC<EventFormProps> = ({ petId, event, onSave, onCl
   );
 };
 
-const Plus = ({ className }: { className?: string }) => (
-  <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M12 6v6m0 0v6m0-6h6m-6 0H6" />
-  </svg>
-);
-
-const Activity = ({ className }: { className?: string }) => (
-  <svg className={className} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M13 10V3L4 14h7v7l9-11h-7z" />
-  </svg>
-);

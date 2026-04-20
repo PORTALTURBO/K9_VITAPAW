@@ -211,8 +211,8 @@ export const Dashboard: React.FC<DashboardProps> = ({ pet, events, onAddEvent, o
                   tick={{ fontSize: 10, fill: '#666' }}
                   dy={10}
                 />
-                <YAxis hide domain={['dataMin - 1', 'dataMax + 1']} />
-                <Tooltip 
+                <YAxis hide={true} domain={['dataMin - 1', 'dataMax + 1']} />
+                <Tooltip
                   contentStyle={{ borderRadius: '12px', border: 'none', boxShadow: '0 4px 12px rgba(0,0,0,0.1)' }}
                   labelStyle={{ fontWeight: 'bold', color: '#1B3A34' }}
                 />
@@ -278,8 +278,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ pet, events, onAddEvent, o
           <div className="space-y-3">
             {recentActivity.map((event) => {
               const category = getCategory(event.category);
-              // @ts-ignore
-              const Icon = Icons[category.icon] || Icons.HelpCircle;
+              const Icon = (Icons as any)[category.icon] || Icons.HelpCircle;
               return (
                 <motion.div 
                   key={event.id}
