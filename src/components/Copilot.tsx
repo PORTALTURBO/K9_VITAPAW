@@ -55,7 +55,7 @@ export const CopilotScreen: React.FC<CopilotScreenProps> = ({ pet }) => {
   };
 
   return (
-    <div className="min-h-screen pb-40 pt-20 px-6 flex flex-col max-w-2xl mx-auto">
+    <div className="h-full overflow-y-auto pb-40 pt-20 px-6 flex flex-col mx-auto">
       <header className="mb-8 flex items-center justify-between">
         <div className="flex items-center gap-4">
           <div className="w-14 h-14 rounded-2xl bg-primary flex items-center justify-center shadow-xl shadow-primary/20">

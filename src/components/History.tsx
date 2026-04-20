@@ -1,4 +1,4 @@
-import React, { useState } from 'react';
+import React, { useState, useMemo, useCallback } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   Search, 
@@ -37,21 +37,23 @@ export const HistoryScreen: React.FC<HistoryScreenProps> = ({ pet, events, onEdi
     loadData();
   }, []);
 
-  const filteredEvents = events
-    .filter(e => filter === 'all' || e.category === filter)
-    .filter(e => e.title.toLowerCase().includes(search.toLowerCase()) || e.description.toLowerCase().includes(search.toLowerCase()))
-    .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  const filteredEvents = useMemo(() => {
+    return events
+      .filter(e => filter === 'all' || e.category === filter)
+      .filter(e => e.title.toLowerCase().includes(search.toLowerCase()) || e.description.toLowerCase().includes(search.toLowerCase()))
+      .sort((a, b) => new Date(b.date).getTime() - new Date(a.date).getTime());
+  }, [events, filter, search]);
 
-  const getCategoryCount = (catId: string) => {
+  const getCategoryCount = useCallback((catId: string) => {
     if (catId === 'all') return events.length;
     return events.filter(e => e.category === catId).length;
-  };
+  }, [events]);
 
-  const getCategory = (id: string) => categories.find(c => c.id === id) || categories[0];
-  const getStatus = (id: string) => statuses.find(s => s.id === id) || statuses[0];
+  const getCategory = useCallback((id: string) => categories.find(c => c.id === id) || categories[0], [categories]);
+  const getStatus = useCallback((id: string) => statuses.find(s => s.id === id) || statuses[0], [statuses]);
 
   return (
-    <div className="min-h-screen pb-32 pt-6 px-6 bg-[#F9F6E8] relative">
+    <div className="h-full overflow-y-auto pb-32 pt-6 px-6 bg-[#F9F6E8] relative">
       <div className="space-y-6 mb-8">
         <div className="bg-white rounded-full p-4 flex items-center gap-3 shadow-sm border border-black/5">
           <Search className="w-5 h-5 text-gray-400 ml-2" />
@@ -159,7 +161,7 @@ export const HistoryScreen: React.FC<HistoryScreenProps> = ({ pet, events, onEdi
                               const url = isString ? firstMedia : firstMedia.url;
                               const type = isString ? (url.startsWith('data:video/') ? 'video' : 'image') : firstMedia.type;
                               
-                              if (type === 'image') return <img src={url} alt="Adjunto" className="w-full h-full object-cover" />;
+                              if (type === 'image') return <img src={url} alt="Adjunto" loading="lazy" className="w-full h-full object-cover" />;
                               if (type === 'video') return <video src={url} className="w-full h-full object-cover" />;
                               if (type === 'audio') return <div className="w-full h-full bg-blue-50 flex items-center justify-center"><Mic className="w-4 h-4 text-blue-500" /></div>;
                               return <div className="w-full h-full bg-orange-50 flex items-center justify-center"><FileText className="w-4 h-4 text-orange-500" /></div>;

@@ -1,3 +1,26 @@
+export interface CustomThemeData {
+  id: string;
+  name: string;
+  cssVariables: Record<string, string>;
+  fontFamily?: string;
+  backgroundImage?: string;
+  borderRadius?: string;
+  baseTheme?: 'light' | 'dark' | 'oled';
+}
+
+export interface AppSettings {
+  biometricEnabled: boolean;
+  aiProvider: string;
+  theme: string;
+  customThemes?: CustomThemeData[];
+  notifications: {
+    enabled: boolean;
+    sound: boolean;
+    vibration: boolean;
+    advanceMinutes: number;
+  };
+}
+
 export interface CustomCategory {
   id: string;
   label: string;
@@ -73,6 +96,7 @@ export interface Pet {
   breed: string;
   birthDate: string;
   weight: number;
+  idealWeight?: number;
   sex: 'male' | 'female';
   neutered: boolean;
   photo?: string;
@@ -84,6 +108,14 @@ export interface Pet {
   vetPhone?: string;
   notes?: string;
   weightHistory: { date: string; value: number }[];
+  expectedData?: {
+    idealWeight?: number;
+    checkupFrequencyMonths?: number;
+    minTemperature?: number;
+    maxTemperature?: number;
+    minHeartRate?: number;
+    maxHeartRate?: number;
+  };
 }
 
 

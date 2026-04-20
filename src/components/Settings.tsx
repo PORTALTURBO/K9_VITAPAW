@@ -10,10 +10,13 @@ import {
   CloudUpload, 
   Info,
   ChevronRight,
-  Tags
+  Tags,
+  Download,
+  Bell
 } from 'lucide-react';
 import { cn } from '../lib/utils';
 import { storageService } from '../services/storageService';
+import { notificationService } from '../services/notificationService';
 import { TagsManager } from './TagsManager';
 import { AnimatePresence, motion } from 'motion/react';
 
@@ -24,26 +27,37 @@ interface SettingsProps {
 
 export const SettingsScreen: React.FC<SettingsProps> = ({ onClose, onChangePet }) => {
   const [showTagsManager, setShowTagsManager] = useState(false);
-  const [settings, setSettings] = useState({ biometricEnabled: false, aiProvider: 'gemma4b' });
+  const [settings, setSettings] = useState<any>({ 
+    biometricEnabled: false, 
+    aiProvider: 'gemma4b',
+    theme: 'clinical',
+    notifications: { enabled: false, sound: true, vibration: true, advanceMinutes: 15 }
+  });
 
   React.useEffect(() => {
-    storageService.getSettings().then(setSettings);
+    storageService.getSettings().then(s => setSettings(s));
   }, []);
 
-  const handleToggleBiometric = async () => {
-    const newSettings = { ...settings, biometricEnabled: !settings.biometricEnabled };
+  const updateSetting = async (key: string, value: any) => {
+    const newSettings = { ...settings, [key]: value };
     setSettings(newSettings);
     await storageService.saveSettings(newSettings);
   };
 
-  const handleProviderChange = async (e: React.ChangeEvent<HTMLSelectElement>) => {
-    const newSettings = { ...settings, aiProvider: e.target.value };
+  const updateNotificationSetting = async (key: string, value: any) => {
+    const newSettings = { 
+      ...settings, 
+      notifications: { ...settings.notifications, [key]: value } 
+    };
     setSettings(newSettings);
     await storageService.saveSettings(newSettings);
   };
+
+  const handleToggleBiometric = () => updateSetting('biometricEnabled', !settings.biometricEnabled);
+  const handleProviderChange = (e: React.ChangeEvent<HTMLSelectElement>) => updateSetting('aiProvider', e.target.value);
 
   return (
-    <div className="min-h-screen pt-20 px-6 pb-32 bg-[#F9F6E8] overflow-y-auto">
+    <div className="h-full overflow-y-auto pt-20 px-6 pb-32 bg-[#F9F6E8]">
       <div className="flex items-center gap-4 mb-8">
         <button 
           onClick={onClose}
@@ -55,36 +69,6 @@ export const SettingsScreen: React.FC<SettingsProps> = ({ onClose, onChangePet }
       </div>
       
       <div className="space-y-8">
-        {/* Apariencia */}
-        <section>
-          <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-on-surface-variant/60 mb-3 ml-2">Apariencia</h2>
-          <div className="bg-white rounded-3xl border border-outline-variant/20 overflow-hidden shadow-sm">
-            <button className="w-full p-5 flex items-center justify-between hover:bg-surface-container-lowest transition-colors border-b border-outline-variant/10">
-              <div className="flex items-center gap-4">
-                <div className="p-2 bg-surface-container-low rounded-xl">
-                  <Palette className="w-5 h-5 text-primary" />
-                </div>
-                <div className="text-left">
-                  <p className="font-bold text-primary text-sm">Tema de la App</p>
-                  <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mt-0.5">Clinical Sanctuary</p>
-                </div>
-              </div>
-              <ChevronRight className="w-4 h-4 text-outline" />
-            </button>
-            <button className="w-full p-5 flex items-center justify-between hover:bg-surface-container-lowest transition-colors">
-              <div className="flex items-center gap-4">
-                <div className="p-2 bg-surface-container-low rounded-xl">
-                  <Wand2 className="w-5 h-5 text-primary" />
-                </div>
-                <div className="text-left">
-                  <p className="font-bold text-primary text-sm">Theme Builder Studio</p>
-                </div>
-              </div>
-              <ChevronRight className="w-4 h-4 text-outline" />
-            </button>
-          </div>
-        </section>
-
         {/* Personalización */}
         <section>
           <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-on-surface-variant/60 mb-3 ml-2">Personalización</h2>
@@ -107,11 +91,11 @@ export const SettingsScreen: React.FC<SettingsProps> = ({ onClose, onChangePet }
           </div>
         </section>
 
-        {/* Seguridad */}
+        {/* Seguridad y Notificaciones */}
         <section>
-          <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-on-surface-variant/60 mb-3 ml-2">Seguridad</h2>
+          <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-on-surface-variant/60 mb-3 ml-2">Seguridad y Alertas</h2>
           <div className="bg-white rounded-3xl border border-outline-variant/20 overflow-hidden shadow-sm">
-            <div className="w-full p-5 flex items-center justify-between">
+            <div className="w-full p-5 flex items-center justify-between border-b border-outline-variant/10">
               <div className="flex items-center gap-4">
                 <div className="p-2 bg-surface-container-low rounded-xl">
                   <Fingerprint className="w-5 h-5 text-primary" />
@@ -133,6 +117,137 @@ export const SettingsScreen: React.FC<SettingsProps> = ({ onClose, onChangePet }
                 )}></div>
               </div>
             </div>
+
+            <div className="w-full p-5 flex flex-col gap-4 border-b border-outline-variant/10">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-4">
+                  <div className="p-2 bg-surface-container-low rounded-xl">
+                    <Bell className="w-5 h-5 text-primary" />
+                  </div>
+                  <div className="text-left">
+                    <p className="font-bold text-primary text-sm">Alertas y Avisos</p>
+                    <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mt-0.5">Permisos del navegador</p>
+                  </div>
+                </div>
+                <button 
+                  onClick={async () => {
+                    const granted = await notificationService.requestPermission();
+                    if (granted) {
+                      updateNotificationSetting('enabled', true);
+                      notificationService.sendNotification('¡Notificaciones Activadas!', {
+                        body: 'K9 VitalPaw te enviará recordatorios médicos importantes.',
+                      });
+                    } else {
+                      updateNotificationSetting('enabled', true);
+                      notificationService.sendNotification('Aviso', {
+                        body: 'Las notificaciones nativas están bloqueadas. Se usarán notificaciones internas de la app.',
+                      });
+                    }
+                  }}
+                  className={cn(
+                    "text-xs px-3 py-1.5 rounded-full font-bold transition-colors",
+                    settings.notifications?.enabled ? "bg-secondary text-white" : "bg-primary text-white"
+                  )}
+                >
+                  {settings.notifications?.enabled ? 'Activado' : 'Activar'}
+                </button>
+              </div>
+
+              {settings.notifications?.enabled && (
+                <div className="pl-12 flex flex-col gap-3 mt-2 border-t border-outline-variant/10 pt-4">
+                  
+                  {/* Sound Toggle */}
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-bold text-primary text-opacity-80">Sonido de Notificación</span>
+                    <div 
+                      onClick={() => updateNotificationSetting('sound', !settings.notifications.sound)}
+                      className={cn(
+                        "w-10 h-5 rounded-full relative p-0.5 cursor-pointer transition-colors",
+                        settings.notifications.sound ? "bg-secondary" : "bg-gray-300"
+                      )}
+                    >
+                      <div className={cn(
+                        "w-4 h-4 bg-white rounded-full shadow-sm transition-transform",
+                        settings.notifications.sound ? "translate-x-5" : "translate-x-0"
+                      )}></div>
+                    </div>
+                  </div>
+
+                  {/* Vibration Toggle */}
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-bold text-primary text-opacity-80">Vibración</span>
+                    <div 
+                      onClick={() => updateNotificationSetting('vibration', !settings.notifications.vibration)}
+                      className={cn(
+                        "w-10 h-5 rounded-full relative p-0.5 cursor-pointer transition-colors",
+                        settings.notifications.vibration ? "bg-secondary" : "bg-gray-300"
+                      )}
+                    >
+                      <div className={cn(
+                        "w-4 h-4 bg-white rounded-full shadow-sm transition-transform",
+                        settings.notifications.vibration ? "translate-x-5" : "translate-x-0"
+                      )}></div>
+                    </div>
+                  </div>
+
+                  {/* Advance Time Select */}
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm font-bold text-primary text-opacity-80">Recordatorio Previo Adicional</span>
+                    <select
+                      value={settings.notifications.advanceMinutes}
+                      onChange={(e) => updateNotificationSetting('advanceMinutes', Number(e.target.value))}
+                      className="text-sm font-bold bg-surface-container-low text-primary rounded-lg px-2 py-1 outline-none border border-outline-variant/20"
+                    >
+                      <option value={0}>Solo al momento exacto (0 min)</option>
+                      <option value={15}>Avisar 15 minutos antes</option>
+                      <option value={60}>Avisar 1 hora antes</option>
+                      <option value={1440}>Avisar 1 día antes</option>
+                    </select>
+                  </div>
+                </div>
+              )}
+            </div>
+
+            <button 
+              onClick={() => {
+                notificationService.sendNotification('Prueba de Sistema', {
+                  body: 'Esta es una prueba de los recordatorios de K9 VitalPaw.'
+                });
+              }}
+              className="w-full p-5 flex items-center justify-between border-b border-outline-variant/10 hover:bg-surface-container-lowest transition-colors"
+            >
+              <div className="flex items-center gap-4">
+                <div className="p-2 bg-transparent rounded-xl">
+                  <div className="w-5 h-5"></div>
+                </div>
+                <div className="text-left">
+                  <p className="font-bold text-primary text-sm">Enviar Notificación de Prueba</p>
+                  <p className="text-[10px] font-bold text-on-surface-variant uppercase tracking-widest mt-0.5">Test Inmediato</p>
+                </div>
+              </div>
+              <ChevronRight className="w-4 h-4 text-outline" />
+            </button>
+
+            <button 
+              onClick={() => {
+                notificationService.clearHistory();
+                notificationService.sendNotification('Caché Limpiado', {
+                  body: 'El historial de envíos se ha borrado.'
+                });
+              }}
+              className="w-full p-5 flex items-center justify-between hover:bg-surface-container-lowest transition-colors"
+            >
+              <div className="flex items-center gap-4">
+                <div className="p-2 bg-transparent rounded-xl">
+                  <div className="w-5 h-5"></div>
+                </div>
+                <div className="text-left">
+                  <p className="font-bold text-primary text-sm">Limpiar Historial de Alertas</p>
+                  <p className="text-[10px] font-bold text-error uppercase tracking-widest mt-0.5">Para volver a probar alarmas pasadas</p>
+                </div>
+              </div>
+              <ChevronRight className="w-4 h-4 text-outline" />
+            </button>
           </div>
         </section>
 
@@ -224,28 +339,6 @@ export const SettingsScreen: React.FC<SettingsProps> = ({ onClose, onChangePet }
         <section>
           <h2 className="text-[10px] font-black uppercase tracking-[0.2em] text-on-surface-variant/60 mb-3 ml-2">Datos</h2>
           <div className="bg-white rounded-3xl border border-outline-variant/20 overflow-hidden shadow-sm">
-            <button className="w-full p-5 flex items-center justify-between hover:bg-surface-container-lowest transition-colors border-b border-outline-variant/10">
-              <div className="flex items-center gap-4">
-                <div className="p-2 bg-surface-container-low rounded-xl">
-                  <FileText className="w-5 h-5 text-primary" />
-                </div>
-                <div className="text-left">
-                  <p className="font-bold text-primary text-sm">Exportar a PDF</p>
-                </div>
-              </div>
-              <ChevronRight className="w-4 h-4 text-outline" />
-            </button>
-            <button className="w-full p-5 flex items-center justify-between hover:bg-surface-container-lowest transition-colors border-b border-outline-variant/10">
-              <div className="flex items-center gap-4">
-                <div className="p-2 bg-surface-container-low rounded-xl">
-                  <Table className="w-5 h-5 text-primary" />
-                </div>
-                <div className="text-left">
-                  <p className="font-bold text-primary text-sm">Exportar a CSV</p>
-                </div>
-              </div>
-              <ChevronRight className="w-4 h-4 text-outline" />
-            </button>
             <button className="w-full p-5 flex items-center justify-between hover:bg-surface-container-lowest transition-colors">
               <div className="flex items-center gap-4">
                 <div className="p-2 bg-surface-container-low rounded-xl">

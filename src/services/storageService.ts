@@ -1,4 +1,4 @@
-import { Pet, MedicalEvent, OwnerProfile, CustomCategory, CustomStatus } from '../types';
+import { Pet, MedicalEvent, OwnerProfile, CustomCategory, CustomStatus, AppSettings } from '../types';
 import { v4 as uuidv4 } from 'uuid';
 import localforage from 'localforage';
 
@@ -23,18 +23,34 @@ const DEFAULT_STATUSES: CustomStatus[] = [
 ];
 
 export const storageService = {
-  getSettings: async () => {
-    const data = await localforage.getItem(SETTINGS_KEY);
+  getSettings: async (): Promise<AppSettings & { aiPromptShown?: boolean; aiDownloaded?: boolean }> => {
+    const data = await localforage.getItem(SETTINGS_KEY) as any;
+    const defaultSettings: AppSettings & { aiPromptShown?: boolean; aiDownloaded?: boolean } = { 
+      biometricEnabled: false, 
+      aiProvider: 'gemma4b', 
+      theme: 'clinical',
+      notifications: {
+        enabled: false,
+        sound: true,
+        vibration: true,
+        advanceMinutes: 15
+      },
+      aiPromptShown: false, 
+      aiDownloaded: false 
+    };
+
     if (!data) {
-      const defaultSettings = { biometricEnabled: false, aiProvider: 'gemma4b', aiPromptShown: false, aiDownloaded: false };
       await localforage.setItem(SETTINGS_KEY, defaultSettings);
       return defaultSettings;
     }
-    return data as { biometricEnabled: boolean, aiProvider: string, aiPromptShown: boolean, aiDownloaded: boolean };
+
+    // Merge defaults to handle previous versions missing some keys
+    return { ...defaultSettings, ...data, notifications: { ...defaultSettings.notifications, ...(data.notifications || {}) } };
   },
 
-  saveSettings: async (settings: any) => {
-    await localforage.setItem(SETTINGS_KEY, settings);
+  saveSettings: async (settings: Partial<AppSettings & { aiPromptShown?: boolean; aiDownloaded?: boolean }>) => {
+    const current = await storageService.getSettings();
+    await localforage.setItem(SETTINGS_KEY, { ...current, ...settings });
   },
 
   getCategories: async (): Promise<CustomCategory[]> => {

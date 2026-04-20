@@ -8,18 +8,24 @@ import { EventForm } from './components/EventForm';
 import { PetForm } from './components/PetForm';
 import { SettingsScreen } from './components/Settings';
 import { MedicationScreen } from './components/MedicationScreen';
+import { DigitalReportScreen } from './components/DigitalReportScreen';
+import { EventDetailsScreen } from './components/EventDetailsScreen';
+import { WellnessModal } from './components/WellnessModal';
+import { NotificationCenter } from './components/NotificationCenter';
 import { Multimedia } from './components/Multimedia';
+import { ThemeStudio } from './components/ThemeStudio';
 import { TopBar, BottomNav } from './components/Navigation';
 import { ConfirmModal } from './components/ConfirmModal';
 import { AIPromptModal } from './components/AIPromptModal';
 import { AIDownloadProgress } from './components/AIDownloadProgress';
 import { storageService } from './services/storageService';
+import { notificationService } from './services/notificationService';
 import { Pet, MedicalEvent } from './types';
 import { AnimatePresence, motion } from 'motion/react';
-import { Info } from 'lucide-react';
+import { Info, Bell } from 'lucide-react';
 
 type AppState = 'splash' | 'lock' | 'pet-selector' | 'main' | 'settings';
-type MainTab = 'dashboard' | 'history' | 'multimedia' | 'copilot' | 'settings';
+type MainTab = 'dashboard' | 'history' | 'multimedia' | 'copilot' | 'settings' | 'studio';
 
 export default function App() {
   const [state, setState] = useState<AppState>('splash');
@@ -34,6 +40,10 @@ export default function App() {
   const [showPetForm, setShowPetForm] = useState(false);
   const [editingPet, setEditingPet] = useState<Pet | undefined>();
   const [showMedications, setShowMedications] = useState(false);
+  const [showDigitalReport, setShowDigitalReport] = useState(false);
+  const [showWellnessModal, setShowWellnessModal] = useState(false);
+  const [showNotifications, setShowNotifications] = useState(false);
+  const [selectedEventDetails, setSelectedEventDetails] = useState<MedicalEvent | null>(null);
 
   // Confirm Modal state
   const [confirmConfig, setConfirmConfig] = useState<{
@@ -53,10 +63,70 @@ export default function App() {
   const [isDownloadingAI, setIsDownloadingAI] = useState(false);
   const [aiDownloadProgress, setAiDownloadProgress] = useState(0);
   const [showAIToast, setShowAIToast] = useState(false);
+  const [notificationToast, setNotificationToast] = useState<{title: string, body: string} | null>(null);
+
+  // Background notification engine
+  useEffect(() => {
+    notificationService.setFallback((title: string, body: string) => {
+      setNotificationToast({ title, body });
+      setTimeout(() => setNotificationToast(null), 8000);
+    });
+
+    notificationService.startPolling(
+      () => events, // provide latest events
+      () => pets    // provide latest pets
+    );
+
+    return () => notificationService.stopPolling();
+  }, [events, pets]);
 
   useEffect(() => {
     loadData();
   }, []);
+
+  useEffect(() => {
+    storageService.getSettings().then(settings => {
+      if (settings?.theme) {
+        if (settings.theme.startsWith('custom_')) {
+          document.documentElement.setAttribute('data-theme', 'custom');
+          const customTheme = settings.customThemes?.find((t: any) => t.id === settings.theme);
+          if (customTheme) {
+            Object.entries(customTheme.cssVariables).forEach(([key, value]) => {
+               document.documentElement.style.setProperty(key, value as string);
+            });
+            
+            if (customTheme.fontFamily) {
+               const fontUrl = `https://fonts.googleapis.com/css2?family=${customTheme.fontFamily.replace(/ /g, '+')}:wght@400;500;700&display=swap`;
+               let link = document.getElementById('dynamic-font') as HTMLLinkElement;
+               if (!link) {
+                 link = document.createElement('link');
+                 link.id = 'dynamic-font';
+                 link.rel = 'stylesheet';
+                 document.head.appendChild(link);
+               }
+               link.href = fontUrl;
+               document.documentElement.style.setProperty('--font-custom', `"${customTheme.fontFamily}", sans-serif`);
+               document.body.style.fontFamily = `"${customTheme.fontFamily}", sans-serif`;
+            }
+
+            if (customTheme.backgroundImage) {
+               document.body.style.backgroundImage = `url(${customTheme.backgroundImage})`;
+               document.body.style.backgroundSize = 'cover';
+               document.body.style.backgroundPosition = 'center';
+               document.body.style.backgroundAttachment = 'fixed';
+            } else {
+               document.body.style.backgroundImage = '';
+            }
+          }
+        } else {
+          document.documentElement.removeAttribute('style'); // Clear custom styles
+          document.body.style.fontFamily = '';
+          document.body.style.backgroundImage = '';
+          document.documentElement.setAttribute('data-theme', settings.theme);
+        }
+      }
+    });
+  }, [state, activeTab]); // Refresh on navigation
 
   const loadData = async () => {
     const loadedPets = await storageService.getPets();
@@ -176,6 +246,13 @@ export default function App() {
               setShowPetForm(true);
             }}
             onOpenDoseCalculator={() => setShowMedications(true)}
+            onOpenDigitalReport={() => setShowDigitalReport(true)}
+            onOpenWellness={() => setShowWellnessModal(true)}
+            onEventClick={(action) => {
+              if (action === 'copilot-trigger') {
+                 setShowAIPrompt(true);
+              }
+            }}
           />
         );
       case 'history':
@@ -184,8 +261,7 @@ export default function App() {
             pet={selectedPet} 
             events={petEvents}
             onEditEvent={(e) => {
-              setEditingEvent(e);
-              setShowEventForm(true);
+              setSelectedEventDetails(e);
             }}
             onDeleteEvent={handleDeleteEvent}
             onAddEvent={() => {
@@ -198,6 +274,8 @@ export default function App() {
         return <Multimedia pet={selectedPet} events={petEvents} />;
       case 'copilot':
         return <CopilotScreen pet={selectedPet} />;
+      case 'studio':
+        return <ThemeStudio />;
       case 'settings':
         return (
           <SettingsScreen 
@@ -211,7 +289,27 @@ export default function App() {
   };
 
   return (
-    <div className="min-h-screen bg-surface selection:bg-secondary/20 selection:text-secondary">
+    <div className="h-full w-full bg-surface selection:bg-secondary/20 selection:text-secondary relative overflow-hidden">
+      <AnimatePresence mode="wait">
+        {notificationToast && (
+          <motion.div 
+            initial={{ opacity: 0, y: -50 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -50 }}
+            className="fixed top-20 left-4 right-4 md:left-auto md:right-4 md:w-96 z-[250] bg-white rounded-2xl shadow-2xl border-l-4 border-[#146a5d] p-4 flex items-center gap-3 cursor-pointer"
+            onClick={() => setNotificationToast(null)}
+          >
+            <div className="p-2 bg-[#146a5d]/10 rounded-full flex-shrink-0">
+              <Bell className="w-5 h-5 text-[#146a5d]" />
+            </div>
+            <div>
+              <p className="font-bold text-sm text-[#03241f]">{notificationToast.title}</p>
+              <p className="text-xs text-gray-600 mt-0.5">{notificationToast.body}</p>
+            </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <AnimatePresence mode="wait">
         {showAIToast && (
           <motion.div 
@@ -246,7 +344,7 @@ export default function App() {
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
               exit={{ opacity: 0 }}
-              className="w-full h-full max-w-md md:max-w-2xl lg:max-w-4xl xl:max-w-5xl mx-auto relative flex flex-col shadow-2xl bg-[#F9F6E8] overflow-hidden"
+              className="w-full h-full relative flex flex-col bg-[#F9F6E8]"
             >
               <PetSelector 
                 pets={pets} 
@@ -273,7 +371,7 @@ export default function App() {
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               exit={{ opacity: 0, y: 20 }}
-              className="w-full h-full max-w-md md:max-w-2xl lg:max-w-4xl xl:max-w-5xl mx-auto relative flex flex-col shadow-2xl bg-[#F9F6E8] overflow-hidden"
+              className="w-full h-full relative flex flex-col bg-[#F9F6E8]"
             >
               <SettingsScreen 
                 onClose={() => setState('pet-selector')} 
@@ -288,7 +386,7 @@ export default function App() {
               key="main"
               initial={{ opacity: 0 }}
               animate={{ opacity: 1 }}
-              className="w-full h-full max-w-md md:max-w-2xl lg:max-w-4xl xl:max-w-5xl mx-auto relative flex flex-col shadow-2xl bg-surface"
+              className="w-full h-full relative flex flex-col shadow-none bg-surface overflow-x-hidden"
             >
               <TopBar 
                 title={activeTab === 'dashboard' ? selectedPet.name : activeTab.charAt(0).toUpperCase() + activeTab.slice(1)} 
@@ -300,13 +398,21 @@ export default function App() {
                   }
                 }}
                 rightElement={
-                  <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-secondary/20">
-                    <img 
-                      src={selectedPet.photo || `https://picsum.photos/seed/${selectedPet.name}/100/100`} 
-                      alt={selectedPet.name} 
-                      className="w-full h-full object-cover"
-                      referrerPolicy="no-referrer"
-                    />
+                  <div className="flex items-center gap-3">
+                    <button onClick={() => setShowNotifications(true)} className="relative p-2 bg-surface-container-low rounded-full active:scale-90 transition-transform">
+                      <Bell className="w-5 h-5 text-primary" />
+                      {events.filter(e => e.status === 'active' && new Date(`${e.date}T${e.time || '00:00'}`) < new Date()).length > 0 && (
+                        <span className="absolute 0 top-0 right-0 w-3 h-3 bg-error rounded-full outline outline-2 outline-surface"></span>
+                      )}
+                    </button>
+                    <div className="w-10 h-10 rounded-full overflow-hidden border-2 border-secondary/20">
+                      <img 
+                        src={selectedPet.photo || `https://picsum.photos/seed/${selectedPet.name}/100/100`} 
+                        alt={selectedPet.name} 
+                        className="w-full h-full object-cover"
+                        referrerPolicy="no-referrer"
+                      />
+                    </div>
                   </div>
                 }
               />
@@ -401,6 +507,86 @@ export default function App() {
             <MedicationScreen 
               pet={selectedPet}
               onClose={() => setShowMedications(false)}
+            />
+          </motion.div>
+        )}
+
+        {showDigitalReport && selectedPet && (
+          <motion.div
+            initial={{ y: '100%' }}
+            animate={{ y: 0 }}
+            exit={{ y: '100%' }}
+            transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+            className="fixed inset-0 z-[120]"
+          >
+            <DigitalReportScreen 
+              pet={selectedPet}
+              events={events.filter(e => e.petId === selectedPet.id)}
+              onClose={() => setShowDigitalReport(false)}
+            />
+          </motion.div>
+        )}
+
+        {showWellnessModal && selectedPet && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 z-[150]"
+          >
+            <WellnessModal 
+              pet={selectedPet}
+              events={events.filter(e => e.petId === selectedPet.id)}
+              onClose={() => setShowWellnessModal(false)}
+              onSavePet={handleSavePet}
+            />
+          </motion.div>
+        )}
+
+        {showNotifications && (
+          <motion.div
+            initial={{ y: '100%' }}
+            animate={{ y: 0 }}
+            exit={{ y: '100%' }}
+            transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+            className="fixed inset-0 z-[160]"
+          >
+            <NotificationCenter 
+              events={events}
+              pets={pets}
+              onClose={() => setShowNotifications(false)}
+              onNavigateToEvent={(id) => {
+                const event = events.find(e => e.id === id);
+                if (event) {
+                  setSelectedEventDetails(event);
+                  setShowNotifications(false);
+                }
+              }}
+            />
+          </motion.div>
+        )}
+
+        {selectedEventDetails && selectedPet && (
+          <motion.div
+            initial={{ x: '100%' }}
+            animate={{ x: 0 }}
+            exit={{ x: '100%' }}
+            transition={{ type: 'spring', damping: 25, stiffness: 200 }}
+            className="fixed inset-0 z-[120]"
+          >
+            <EventDetailsScreen 
+              event={selectedEventDetails}
+              pet={selectedPet}
+              onClose={() => setSelectedEventDetails(null)}
+              onEdit={() => {
+                setEditingEvent(selectedEventDetails);
+                setSelectedEventDetails(null);
+                setShowEventForm(true);
+              }}
+              onDelete={() => {
+                handleDeleteEvent(selectedEventDetails.id);
+                setSelectedEventDetails(null);
+              }}
             />
           </motion.div>
         )}

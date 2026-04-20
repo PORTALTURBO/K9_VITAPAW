@@ -4,6 +4,7 @@ import { X, Save, Calendar, Clock, Image as ImageIcon, Bell, Camera, Video, Aler
 import { MedicalEvent, MediaItem, Pet } from '../types';
 import { SEVERITIES } from '../constants';
 import { storageService } from '../services/storageService';
+import { notificationService } from '../services/notificationService';
 import { cn } from '../lib/utils';
 import { v4 as uuidv4 } from 'uuid';
 import * as Icons from 'lucide-react';
@@ -59,7 +60,7 @@ export const EventForm: React.FC<EventFormProps> = ({ pet, event, onSave, onClos
     e.preventDefault();
     if (!formData.title || !formData.date) return;
 
-    onSave({
+    const newEvent: MedicalEvent = {
       id: event?.id || uuidv4(),
       petId: pet.id,
       title: formData.title,
@@ -74,7 +75,19 @@ export const EventForm: React.FC<EventFormProps> = ({ pet, event, onSave, onClos
       vitals: formData.vitals,
       professional: formData.professional,
       reminder: formData.reminder,
-    });
+    };
+
+    if (newEvent.reminder?.enabled) {
+      // Schedule a notification for demonstration (e.g., 5 seconds from now)
+      // In a real app, this would use a background worker or server push
+      notificationService.scheduleReminder(
+        `Recordatorio: ${newEvent.title}`,
+        `Para ${pet.name} - ${newEvent.description || 'Revisa los detalles en la app.'}`,
+        5000 // 5 seconds for demo purposes
+      );
+    }
+
+    onSave(newEvent);
   };
 
   const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -131,7 +144,7 @@ export const EventForm: React.FC<EventFormProps> = ({ pet, event, onSave, onClos
                 <h3 className="text-sm font-bold text-[#1B3A34] uppercase tracking-widest">Categoría y Estado</h3>
               </div>
               <button type="button" className="bg-[#E2F0D9] text-[#2E7D6F] px-3 py-1 rounded-full text-[10px] font-bold flex items-center gap-1">
-                <Plus className="w-3 h-3" /> NUEVA
+                <Icons.Plus className="w-3 h-3" /> NUEVA
               </button>
             </div>
             

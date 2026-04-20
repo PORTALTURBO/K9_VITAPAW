@@ -1,5 +1,5 @@
 import React from 'react';
-import { Home, History, Brain, Settings, ArrowLeft, Image as ImageIcon } from 'lucide-react';
+import { Home, History, Brain, Settings as SettingsIcon, ArrowLeft, Image as ImageIcon, Info, Image } from 'lucide-react';
 import { cn } from '../lib/utils';
 
 interface TopBarProps {
@@ -36,10 +36,10 @@ interface BottomNavProps {
 
 export const BottomNav: React.FC<BottomNavProps> = ({ activeTab, onTabChange }) => {
   const tabs = [
-    { id: 'dashboard', label: 'Dashboard', icon: Home },
-    { id: 'history', label: 'Historial', icon: History },
-    { id: 'multimedia', label: 'Galería', icon: ImageIcon },
-    { id: 'copilot', label: 'Copilot', icon: Brain },
+    { id: 'dashboard', label: 'Health', icon: Home },
+    { id: 'studio', label: 'Studio', icon: Image },
+    { id: 'history', label: 'Logs', icon: History },
+    { id: 'settings', label: 'Profile', icon: Info },
   ];
 
   return (
